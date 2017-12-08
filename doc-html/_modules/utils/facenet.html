@@ -1,0 +1,329 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>utils.facenet &#8212; Face Verification 1.0 documentation</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for utils.facenet</h1><div class="highlight"><pre>
+<span></span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">Created on Nov 24, 2017</span>
+
+<span class="sd">@author: inayatkh@gmail.com</span>
+
+<span class="sd">The facenet.py module contains code related to `faceNet &lt;https://arxiv.org/pdf/1503.03832.pdf&gt;`_,</span>
+<span class="sd">which follows the inception `Deep Net &lt;https://arxiv.org/abs/1409.4842&gt;`_.</span>
+
+<span class="sd">A part of these utilities function are taken from `OpenFace &lt;http://cmusatyalab.github.io/openface/&gt;`_</span>
+<span class="sd">and its Tensorflow or Keras  utilitiies implementation:</span>
+
+
+<span class="sd">* `Keras-OpenFace &lt;https://github.com/iwantooxxoox/Keras-OpenFace/blob/master/utils.py&gt;`_</span>
+
+<span class="sd">&#39;&#39;&#39;</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">cv2</span>
+<span class="kn">import</span> <span class="nn">tensorflow</span> <span class="k">as</span> <span class="nn">tf</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+
+<span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">genfromtxt</span>
+<span class="kn">from</span> <span class="nn">keras.layers</span> <span class="k">import</span> <span class="n">Conv2D</span><span class="p">,</span> <span class="n">ZeroPadding2D</span><span class="p">,</span> <span class="n">Activation</span> <span class="c1">#, Input, concatenate</span>
+<span class="kn">from</span> <span class="nn">keras.models</span> <span class="k">import</span> <span class="n">Model</span>
+<span class="kn">from</span> <span class="nn">keras.layers.normalization</span> <span class="k">import</span> <span class="n">BatchNormalization</span>
+<span class="kn">from</span> <span class="nn">keras.layers.pooling</span> <span class="k">import</span> <span class="n">MaxPooling2D</span><span class="p">,</span> <span class="n">AveragePooling2D</span>
+
+
+
+<span class="n">_FLOATX</span> <span class="o">=</span> <span class="s1">&#39;float32&#39;</span>
+
+<span class="k">def</span> <span class="nf">variable</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">_FLOATX</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="n">v</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">),</span> <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">)</span>
+    <span class="n">_get_session</span><span class="p">()</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">v</span><span class="o">.</span><span class="n">initializer</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">v</span>
+
+<span class="k">def</span> <span class="nf">shape</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">x</span><span class="o">.</span><span class="n">get_shape</span><span class="p">()</span>
+
+<span class="k">def</span> <span class="nf">square</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">tf</span><span class="o">.</span><span class="n">square</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">zeros</span><span class="p">(</span><span class="n">shape</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">_FLOATX</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">variable</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">shape</span><span class="p">),</span> <span class="n">dtype</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">concatenate</span><span class="p">(</span><span class="n">tensors</span><span class="p">,</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">axis</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">axis</span> <span class="o">=</span> <span class="n">axis</span> <span class="o">%</span> <span class="nb">len</span><span class="p">(</span><span class="n">tensors</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">get_shape</span><span class="p">())</span>
+    <span class="k">return</span> <span class="n">tf</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="n">axis</span><span class="p">,</span> <span class="n">tensors</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">LRN2D</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">tf</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">lrn</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">1e-4</span><span class="p">,</span> <span class="n">beta</span><span class="o">=</span><span class="mf">0.75</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">conv2d_bn</span><span class="p">(</span>
+        <span class="n">x</span><span class="p">,</span>
+        <span class="n">layer</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">cv1_out</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">cv1_filter</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+        <span class="n">cv1_strides</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+        <span class="n">cv2_out</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">cv2_filter</span><span class="o">=</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span>
+        <span class="n">cv2_strides</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+        <span class="n">padding</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="n">num</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span> <span class="k">if</span> <span class="n">cv2_out</span> <span class="o">==</span> <span class="kc">None</span> <span class="k">else</span> <span class="s1">&#39;1&#39;</span>
+    <span class="c1">#tensor = Conv2D(cv1_out, cv1_filter, strides=cv1_strides, name=layer + &#39;_conv&#39; + num)(x)</span>
+    <span class="n">tensor</span> <span class="o">=</span> <span class="n">Conv2D</span><span class="p">(</span><span class="n">cv1_out</span><span class="p">,</span> <span class="n">cv1_filter</span><span class="p">,</span> <span class="n">strides</span><span class="o">=</span><span class="n">cv1_strides</span><span class="p">,</span> <span class="n">data_format</span><span class="o">=</span><span class="s1">&#39;channels_first&#39;</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">layer</span><span class="o">+</span><span class="s1">&#39;_conv&#39;</span><span class="o">+</span><span class="n">num</span><span class="p">)(</span><span class="n">x</span><span class="p">)</span>
+    <span class="c1">#tensor = BatchNormalization(axis=3, epsilon=0.00001, name=layer + &#39;_bn&#39; + num)(tensor)</span>
+    <span class="n">tensor</span> <span class="o">=</span> <span class="n">BatchNormalization</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">epsilon</span><span class="o">=</span><span class="mf">0.00001</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">layer</span><span class="o">+</span><span class="s1">&#39;_bn&#39;</span><span class="o">+</span><span class="n">num</span><span class="p">)(</span><span class="n">tensor</span><span class="p">)</span>
+    <span class="n">tensor</span> <span class="o">=</span> <span class="n">Activation</span><span class="p">(</span><span class="s1">&#39;relu&#39;</span><span class="p">)(</span><span class="n">tensor</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">padding</span> <span class="o">==</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">tensor</span>
+    <span class="c1">#tensor = ZeroPadding2D(padding=padding)(tensor)</span>
+    <span class="n">tensor</span> <span class="o">=</span> <span class="n">ZeroPadding2D</span><span class="p">(</span><span class="n">padding</span><span class="o">=</span><span class="n">padding</span><span class="p">,</span> <span class="n">data_format</span><span class="o">=</span><span class="s1">&#39;channels_first&#39;</span><span class="p">)(</span><span class="n">tensor</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">cv2_out</span> <span class="o">==</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">tensor</span>
+    <span class="c1">#tensor = Conv2D(cv2_out, cv2_filter, strides=cv2_strides, name=layer + &#39;_conv&#39; + &#39;2&#39;)(tensor)</span>
+    <span class="n">tensor</span> <span class="o">=</span> <span class="n">Conv2D</span><span class="p">(</span><span class="n">cv2_out</span><span class="p">,</span> <span class="n">cv2_filter</span><span class="p">,</span> <span class="n">strides</span><span class="o">=</span><span class="n">cv2_strides</span><span class="p">,</span> <span class="n">data_format</span><span class="o">=</span><span class="s1">&#39;channels_first&#39;</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">layer</span><span class="o">+</span><span class="s1">&#39;_conv&#39;</span><span class="o">+</span><span class="s1">&#39;2&#39;</span><span class="p">)(</span><span class="n">tensor</span><span class="p">)</span>
+    <span class="c1">#tensor = BatchNormalization(axis=3, epsilon=0.00001, name=layer + &#39;_bn&#39; + &#39;2&#39;)(tensor)</span>
+    <span class="n">tensor</span> <span class="o">=</span> <span class="n">BatchNormalization</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">epsilon</span><span class="o">=</span><span class="mf">0.00001</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">layer</span> <span class="o">+</span> <span class="s1">&#39;_bn&#39;</span> <span class="o">+</span> <span class="s1">&#39;2&#39;</span><span class="p">)(</span><span class="n">tensor</span><span class="p">)</span>
+    <span class="n">tensor</span> <span class="o">=</span> <span class="n">Activation</span><span class="p">(</span><span class="s1">&#39;relu&#39;</span><span class="p">)(</span><span class="n">tensor</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">tensor</span>
+
+<span class="n">WEIGHTS</span> <span class="o">=</span> <span class="p">[</span>
+  <span class="s1">&#39;conv1&#39;</span><span class="p">,</span> <span class="s1">&#39;bn1&#39;</span><span class="p">,</span> <span class="s1">&#39;conv2&#39;</span><span class="p">,</span> <span class="s1">&#39;bn2&#39;</span><span class="p">,</span> <span class="s1">&#39;conv3&#39;</span><span class="p">,</span> <span class="s1">&#39;bn3&#39;</span><span class="p">,</span>
+  <span class="s1">&#39;inception_3a_1x1_conv&#39;</span><span class="p">,</span> <span class="s1">&#39;inception_3a_1x1_bn&#39;</span><span class="p">,</span>
+  <span class="s1">&#39;inception_3a_pool_conv&#39;</span><span class="p">,</span> <span class="s1">&#39;inception_3a_pool_bn&#39;</span><span class="p">,</span>
+  <span class="s1">&#39;inception_3a_5x5_conv1&#39;</span><span class="p">,</span> <span class="s1">&#39;inception_3a_5x5_conv2&#39;</span><span class="p">,</span>
+  <span class="s1">&#39;inception_3a_5x5_bn1&#39;</span><span class="p">,</span> <span class="s1">&#39;inception_3a_5x5_bn2&#39;</span><span class="p">,</span>
+  <span class="s1">&#39;inception_3a_3x3_conv1&#39;</span><span class="p">,</span> <span class="s1">&#39;inception_3a_3x3_conv2&#39;</span><span class="p">,</span>
+  <span class="s1">&#39;inception_3a_3x3_bn1&#39;</span><span class="p">,</span> <span class="s1">&#39;inception_3a_3x3_bn2&#39;</span><span class="p">,</span>
+  <span class="s1">&#39;inception_3b_3x3_conv1&#39;</span><span class="p">,</span> <span class="s1">&#39;inception_3b_3x3_conv2&#39;</span><span class="p">,</span>
+  <span class="s1">&#39;inception_3b_3x3_bn1&#39;</span><span class="p">,</span> <span class="s1">&#39;inception_3b_3x3_bn2&#39;</span><span class="p">,</span>
+  <span class="s1">&#39;inception_3b_5x5_conv1&#39;</span><span class="p">,</span> <span class="s1">&#39;inception_3b_5x5_conv2&#39;</span><span class="p">,</span>
+  <span class="s1">&#39;inception_3b_5x5_bn1&#39;</span><span class="p">,</span> <span class="s1">&#39;inception_3b_5x5_bn2&#39;</span><span class="p">,</span>
+  <span class="s1">&#39;inception_3b_pool_conv&#39;</span><span class="p">,</span> <span class="s1">&#39;inception_3b_pool_bn&#39;</span><span class="p">,</span>
+  <span class="s1">&#39;inception_3b_1x1_conv&#39;</span><span class="p">,</span> <span class="s1">&#39;inception_3b_1x1_bn&#39;</span><span class="p">,</span>
+  <span class="s1">&#39;inception_3c_3x3_conv1&#39;</span><span class="p">,</span> <span class="s1">&#39;inception_3c_3x3_conv2&#39;</span><span class="p">,</span>
+  <span class="s1">&#39;inception_3c_3x3_bn1&#39;</span><span class="p">,</span> <span class="s1">&#39;inception_3c_3x3_bn2&#39;</span><span class="p">,</span>
+  <span class="s1">&#39;inception_3c_5x5_conv1&#39;</span><span class="p">,</span> <span class="s1">&#39;inception_3c_5x5_conv2&#39;</span><span class="p">,</span>
+  <span class="s1">&#39;inception_3c_5x5_bn1&#39;</span><span class="p">,</span> <span class="s1">&#39;inception_3c_5x5_bn2&#39;</span><span class="p">,</span>
+  <span class="s1">&#39;inception_4a_3x3_conv1&#39;</span><span class="p">,</span> <span class="s1">&#39;inception_4a_3x3_conv2&#39;</span><span class="p">,</span>
+  <span class="s1">&#39;inception_4a_3x3_bn1&#39;</span><span class="p">,</span> <span class="s1">&#39;inception_4a_3x3_bn2&#39;</span><span class="p">,</span>
+  <span class="s1">&#39;inception_4a_5x5_conv1&#39;</span><span class="p">,</span> <span class="s1">&#39;inception_4a_5x5_conv2&#39;</span><span class="p">,</span>
+  <span class="s1">&#39;inception_4a_5x5_bn1&#39;</span><span class="p">,</span> <span class="s1">&#39;inception_4a_5x5_bn2&#39;</span><span class="p">,</span>
+  <span class="s1">&#39;inception_4a_pool_conv&#39;</span><span class="p">,</span> <span class="s1">&#39;inception_4a_pool_bn&#39;</span><span class="p">,</span>
+  <span class="s1">&#39;inception_4a_1x1_conv&#39;</span><span class="p">,</span> <span class="s1">&#39;inception_4a_1x1_bn&#39;</span><span class="p">,</span>
+  <span class="s1">&#39;inception_4e_3x3_conv1&#39;</span><span class="p">,</span> <span class="s1">&#39;inception_4e_3x3_conv2&#39;</span><span class="p">,</span>
+  <span class="s1">&#39;inception_4e_3x3_bn1&#39;</span><span class="p">,</span> <span class="s1">&#39;inception_4e_3x3_bn2&#39;</span><span class="p">,</span>
+  <span class="s1">&#39;inception_4e_5x5_conv1&#39;</span><span class="p">,</span> <span class="s1">&#39;inception_4e_5x5_conv2&#39;</span><span class="p">,</span>
+  <span class="s1">&#39;inception_4e_5x5_bn1&#39;</span><span class="p">,</span> <span class="s1">&#39;inception_4e_5x5_bn2&#39;</span><span class="p">,</span>
+  <span class="s1">&#39;inception_5a_3x3_conv1&#39;</span><span class="p">,</span> <span class="s1">&#39;inception_5a_3x3_conv2&#39;</span><span class="p">,</span>
+  <span class="s1">&#39;inception_5a_3x3_bn1&#39;</span><span class="p">,</span> <span class="s1">&#39;inception_5a_3x3_bn2&#39;</span><span class="p">,</span>
+  <span class="s1">&#39;inception_5a_pool_conv&#39;</span><span class="p">,</span> <span class="s1">&#39;inception_5a_pool_bn&#39;</span><span class="p">,</span>
+  <span class="s1">&#39;inception_5a_1x1_conv&#39;</span><span class="p">,</span> <span class="s1">&#39;inception_5a_1x1_bn&#39;</span><span class="p">,</span>
+  <span class="s1">&#39;inception_5b_3x3_conv1&#39;</span><span class="p">,</span> <span class="s1">&#39;inception_5b_3x3_conv2&#39;</span><span class="p">,</span>
+  <span class="s1">&#39;inception_5b_3x3_bn1&#39;</span><span class="p">,</span> <span class="s1">&#39;inception_5b_3x3_bn2&#39;</span><span class="p">,</span>
+  <span class="s1">&#39;inception_5b_pool_conv&#39;</span><span class="p">,</span> <span class="s1">&#39;inception_5b_pool_bn&#39;</span><span class="p">,</span>
+  <span class="s1">&#39;inception_5b_1x1_conv&#39;</span><span class="p">,</span> <span class="s1">&#39;inception_5b_1x1_bn&#39;</span><span class="p">,</span>
+  <span class="s1">&#39;dense_layer&#39;</span>
+<span class="p">]</span>
+
+<span class="n">conv_shape</span> <span class="o">=</span> <span class="p">{</span>
+  <span class="s1">&#39;conv1&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">64</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">7</span><span class="p">],</span>
+  <span class="s1">&#39;conv2&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">64</span><span class="p">,</span> <span class="mi">64</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
+  <span class="s1">&#39;conv3&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">192</span><span class="p">,</span> <span class="mi">64</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span>
+  <span class="s1">&#39;inception_3a_1x1_conv&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">64</span><span class="p">,</span> <span class="mi">192</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
+  <span class="s1">&#39;inception_3a_pool_conv&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">32</span><span class="p">,</span> <span class="mi">192</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
+  <span class="s1">&#39;inception_3a_5x5_conv1&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">16</span><span class="p">,</span> <span class="mi">192</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
+  <span class="s1">&#39;inception_3a_5x5_conv2&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">32</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">5</span><span class="p">],</span>
+  <span class="s1">&#39;inception_3a_3x3_conv1&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">96</span><span class="p">,</span> <span class="mi">192</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
+  <span class="s1">&#39;inception_3a_3x3_conv2&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">128</span><span class="p">,</span> <span class="mi">96</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span>
+  <span class="s1">&#39;inception_3b_3x3_conv1&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">96</span><span class="p">,</span> <span class="mi">256</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
+  <span class="s1">&#39;inception_3b_3x3_conv2&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">128</span><span class="p">,</span> <span class="mi">96</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span>
+  <span class="s1">&#39;inception_3b_5x5_conv1&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">32</span><span class="p">,</span> <span class="mi">256</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
+  <span class="s1">&#39;inception_3b_5x5_conv2&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">64</span><span class="p">,</span> <span class="mi">32</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">5</span><span class="p">],</span>
+  <span class="s1">&#39;inception_3b_pool_conv&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">64</span><span class="p">,</span> <span class="mi">256</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
+  <span class="s1">&#39;inception_3b_1x1_conv&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">64</span><span class="p">,</span> <span class="mi">256</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
+  <span class="s1">&#39;inception_3c_3x3_conv1&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">128</span><span class="p">,</span> <span class="mi">320</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
+  <span class="s1">&#39;inception_3c_3x3_conv2&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">256</span><span class="p">,</span> <span class="mi">128</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span>
+  <span class="s1">&#39;inception_3c_5x5_conv1&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">32</span><span class="p">,</span> <span class="mi">320</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
+  <span class="s1">&#39;inception_3c_5x5_conv2&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">64</span><span class="p">,</span> <span class="mi">32</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">5</span><span class="p">],</span>
+  <span class="s1">&#39;inception_4a_3x3_conv1&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">96</span><span class="p">,</span> <span class="mi">640</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
+  <span class="s1">&#39;inception_4a_3x3_conv2&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">192</span><span class="p">,</span> <span class="mi">96</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span>
+  <span class="s1">&#39;inception_4a_5x5_conv1&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">32</span><span class="p">,</span> <span class="mi">640</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="p">],</span>
+  <span class="s1">&#39;inception_4a_5x5_conv2&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">64</span><span class="p">,</span> <span class="mi">32</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">5</span><span class="p">],</span>
+  <span class="s1">&#39;inception_4a_pool_conv&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">128</span><span class="p">,</span> <span class="mi">640</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
+  <span class="s1">&#39;inception_4a_1x1_conv&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">256</span><span class="p">,</span> <span class="mi">640</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
+  <span class="s1">&#39;inception_4e_3x3_conv1&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">160</span><span class="p">,</span> <span class="mi">640</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
+  <span class="s1">&#39;inception_4e_3x3_conv2&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">256</span><span class="p">,</span> <span class="mi">160</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span>
+  <span class="s1">&#39;inception_4e_5x5_conv1&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">64</span><span class="p">,</span> <span class="mi">640</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
+  <span class="s1">&#39;inception_4e_5x5_conv2&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">128</span><span class="p">,</span> <span class="mi">64</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">5</span><span class="p">],</span>
+  <span class="s1">&#39;inception_5a_3x3_conv1&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">96</span><span class="p">,</span> <span class="mi">1024</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
+  <span class="s1">&#39;inception_5a_3x3_conv2&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">384</span><span class="p">,</span> <span class="mi">96</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span>
+  <span class="s1">&#39;inception_5a_pool_conv&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">96</span><span class="p">,</span> <span class="mi">1024</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
+  <span class="s1">&#39;inception_5a_1x1_conv&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">256</span><span class="p">,</span> <span class="mi">1024</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
+  <span class="s1">&#39;inception_5b_3x3_conv1&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">96</span><span class="p">,</span> <span class="mi">736</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
+  <span class="s1">&#39;inception_5b_3x3_conv2&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">384</span><span class="p">,</span> <span class="mi">96</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span>
+  <span class="s1">&#39;inception_5b_pool_conv&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">96</span><span class="p">,</span> <span class="mi">736</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
+  <span class="s1">&#39;inception_5b_1x1_conv&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">256</span><span class="p">,</span> <span class="mi">736</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
+<span class="p">}</span>
+
+<span class="k">def</span> <span class="nf">load_weights_from_FaceNet</span><span class="p">(</span><span class="n">FRmodel</span><span class="p">):</span>
+    <span class="c1"># Load weights from csv files (which was exported from Openface torch model)</span>
+    <span class="n">weights</span> <span class="o">=</span> <span class="n">WEIGHTS</span>
+    <span class="n">weights_dict</span> <span class="o">=</span> <span class="n">load_weights</span><span class="p">()</span>
+
+    <span class="c1"># Set layer weights of the model</span>
+    <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">weights</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">FRmodel</span><span class="o">.</span><span class="n">get_layer</span><span class="p">(</span><span class="n">name</span><span class="p">)</span> <span class="o">!=</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">FRmodel</span><span class="o">.</span><span class="n">get_layer</span><span class="p">(</span><span class="n">name</span><span class="p">)</span><span class="o">.</span><span class="n">set_weights</span><span class="p">(</span><span class="n">weights_dict</span><span class="p">[</span><span class="n">name</span><span class="p">])</span>
+        <span class="k">elif</span> <span class="n">model</span><span class="o">.</span><span class="n">get_layer</span><span class="p">(</span><span class="n">name</span><span class="p">)</span> <span class="o">!=</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">model</span><span class="o">.</span><span class="n">get_layer</span><span class="p">(</span><span class="n">name</span><span class="p">)</span><span class="o">.</span><span class="n">set_weights</span><span class="p">(</span><span class="n">weights_dict</span><span class="p">[</span><span class="n">name</span><span class="p">])</span>
+            
+    <span class="k">return</span> <span class="n">FRmodel</span>
+<div class="viewcode-block" id="load_weights"><a class="viewcode-back" href="../../code.html#utils.facenet.load_weights">[docs]</a><span class="k">def</span> <span class="nf">load_weights</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    this loads weights of the inception network, faceNet from the csv files in the weights folder</span>
+<span class="sd">    and returns weights dictionary</span>
+<span class="sd">    </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="c1"># Set weights path</span>
+    <span class="n">dir_path</span> <span class="o">=</span> <span class="s1">&#39;./weights&#39;</span>
+    <span class="n">file_names</span> <span class="o">=</span> <span class="nb">filter</span><span class="p">(</span><span class="k">lambda</span> <span class="n">f</span><span class="p">:</span> <span class="ow">not</span> <span class="n">f</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;.&#39;</span><span class="p">),</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">dir_path</span><span class="p">))</span>
+    <span class="n">paths</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">weights_dict</span> <span class="o">=</span> <span class="p">{}</span>
+    
+    <span class="n">weights</span> <span class="o">=</span> <span class="n">WEIGHTS</span>
+    
+    <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">file_names</span><span class="p">:</span>
+        <span class="n">paths</span><span class="p">[</span><span class="n">n</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;.csv&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)]</span> <span class="o">=</span> <span class="n">dir_path</span> <span class="o">+</span> <span class="s1">&#39;/&#39;</span> <span class="o">+</span> <span class="n">n</span>
+
+
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;number of csv files &quot;</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">paths</span><span class="p">),</span> <span class="s2">&quot; in &quot;</span><span class="p">,</span> <span class="n">dir_path</span><span class="p">,</span> <span class="s2">&quot; directory&quot;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">weights</span><span class="p">:</span>
+        
+        <span class="k">if</span> <span class="s1">&#39;conv&#39;</span> <span class="ow">in</span> <span class="n">name</span><span class="p">:</span>
+            
+            <span class="n">conv_w</span> <span class="o">=</span> <span class="n">genfromtxt</span><span class="p">(</span><span class="n">paths</span><span class="p">[</span><span class="n">name</span> <span class="o">+</span> <span class="s1">&#39;_w&#39;</span><span class="p">],</span> <span class="n">delimiter</span><span class="o">=</span><span class="s1">&#39;,&#39;</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+            <span class="n">conv_w</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">conv_w</span><span class="p">,</span> <span class="n">conv_shape</span><span class="p">[</span><span class="n">name</span><span class="p">])</span>
+            <span class="n">conv_w</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="n">conv_w</span><span class="p">,</span> <span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
+            <span class="n">conv_b</span> <span class="o">=</span> <span class="n">genfromtxt</span><span class="p">(</span><span class="n">paths</span><span class="p">[</span><span class="n">name</span> <span class="o">+</span> <span class="s1">&#39;_b&#39;</span><span class="p">],</span> <span class="n">delimiter</span><span class="o">=</span><span class="s1">&#39;,&#39;</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+            <span class="n">weights_dict</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">conv_w</span><span class="p">,</span> <span class="n">conv_b</span><span class="p">]</span>
+        
+        <span class="k">elif</span> <span class="s1">&#39;bn&#39;</span> <span class="ow">in</span> <span class="n">name</span><span class="p">:</span>
+            
+            <span class="n">bn_w</span> <span class="o">=</span> <span class="n">genfromtxt</span><span class="p">(</span><span class="n">paths</span><span class="p">[</span><span class="n">name</span> <span class="o">+</span> <span class="s1">&#39;_w&#39;</span><span class="p">],</span> <span class="n">delimiter</span><span class="o">=</span><span class="s1">&#39;,&#39;</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+            <span class="n">bn_b</span> <span class="o">=</span> <span class="n">genfromtxt</span><span class="p">(</span><span class="n">paths</span><span class="p">[</span><span class="n">name</span> <span class="o">+</span> <span class="s1">&#39;_b&#39;</span><span class="p">],</span> <span class="n">delimiter</span><span class="o">=</span><span class="s1">&#39;,&#39;</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+            <span class="n">bn_m</span> <span class="o">=</span> <span class="n">genfromtxt</span><span class="p">(</span><span class="n">paths</span><span class="p">[</span><span class="n">name</span> <span class="o">+</span> <span class="s1">&#39;_m&#39;</span><span class="p">],</span> <span class="n">delimiter</span><span class="o">=</span><span class="s1">&#39;,&#39;</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+            <span class="n">bn_v</span> <span class="o">=</span> <span class="n">genfromtxt</span><span class="p">(</span><span class="n">paths</span><span class="p">[</span><span class="n">name</span> <span class="o">+</span> <span class="s1">&#39;_v&#39;</span><span class="p">],</span> <span class="n">delimiter</span><span class="o">=</span><span class="s1">&#39;,&#39;</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+            <span class="n">weights_dict</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">bn_w</span><span class="p">,</span> <span class="n">bn_b</span><span class="p">,</span> <span class="n">bn_m</span><span class="p">,</span> <span class="n">bn_v</span><span class="p">]</span>
+        
+        <span class="k">elif</span> <span class="s1">&#39;dense&#39;</span> <span class="ow">in</span> <span class="n">name</span><span class="p">:</span>
+            
+            <span class="n">dense_w</span> <span class="o">=</span> <span class="n">genfromtxt</span><span class="p">(</span><span class="n">dir_path</span> <span class="o">+</span> <span class="s1">&#39;/dense_w.csv&#39;</span><span class="p">,</span> <span class="n">delimiter</span><span class="o">=</span><span class="s1">&#39;,&#39;</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+            <span class="n">dense_w</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">dense_w</span><span class="p">,</span> <span class="p">(</span><span class="mi">128</span><span class="p">,</span> <span class="mi">736</span><span class="p">))</span>
+            <span class="n">dense_w</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="n">dense_w</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
+            <span class="n">dense_b</span> <span class="o">=</span> <span class="n">genfromtxt</span><span class="p">(</span><span class="n">dir_path</span> <span class="o">+</span> <span class="s1">&#39;/dense_b.csv&#39;</span><span class="p">,</span> <span class="n">delimiter</span><span class="o">=</span><span class="s1">&#39;,&#39;</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+            <span class="n">weights_dict</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">dense_w</span><span class="p">,</span> <span class="n">dense_b</span><span class="p">]</span>
+            
+    <span class="k">return</span> <span class="n">weights_dict</span></div>
+
+<div class="viewcode-block" id="img_file_to_encoding"><a class="viewcode-back" href="../../code.html#utils.facenet.img_file_to_encoding">[docs]</a><span class="k">def</span> <span class="nf">img_file_to_encoding</span><span class="p">(</span><span class="n">image_cv</span><span class="p">,</span> <span class="n">model</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Encodes a given image to 128 dim vector by passing it to the network model</span>
+<span class="sd">        </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">img1</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">imread</span><span class="p">(</span><span class="n">image_cv</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">img</span> <span class="o">=</span> <span class="n">img1</span><span class="p">[</span><span class="o">...</span><span class="p">,::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="c1"># bgr to rgb</span>
+    <span class="n">img</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">around</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">))</span><span class="o">/</span><span class="mf">255.0</span><span class="p">,</span> <span class="n">decimals</span><span class="o">=</span><span class="mi">12</span><span class="p">)</span>
+    <span class="n">x_train</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">img</span><span class="p">])</span>
+    <span class="n">embedding</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">predict_on_batch</span><span class="p">(</span><span class="n">x_train</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">embedding</span></div>
+
+<div class="viewcode-block" id="img_to_encoding"><a class="viewcode-back" href="../../code.html#utils.facenet.img_to_encoding">[docs]</a><span class="k">def</span> <span class="nf">img_to_encoding</span><span class="p">(</span><span class="n">image_cv</span><span class="p">,</span> <span class="n">model</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Encodes a given image to 128 dim vector by passing it to the network model</span>
+<span class="sd">        </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1">#img1 = cv2.imread(image_cv, 1)</span>
+    <span class="n">img</span> <span class="o">=</span> <span class="n">image_cv</span><span class="p">[</span><span class="o">...</span><span class="p">,::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="c1"># bgr to rgb</span>
+    <span class="n">img</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">around</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">))</span><span class="o">/</span><span class="mf">255.0</span><span class="p">,</span> <span class="n">decimals</span><span class="o">=</span><span class="mi">12</span><span class="p">)</span>
+    <span class="n">x_train</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">img</span><span class="p">])</span>
+    <span class="n">embedding</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">predict_on_batch</span><span class="p">(</span><span class="n">x_train</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">embedding</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, Inayatullah Khan (inayatkh@gmail.com).
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.5</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

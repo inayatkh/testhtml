@@ -1,0 +1,916 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Deep Face detection in WebCam images &#8212; Face Verification 1.0 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="Welcome to Face Verification’s documentation!" href="index.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="deep-face-detection-in-webcam-images">
+<h1>Deep Face detection in WebCam images<a class="headerlink" href="#deep-face-detection-in-webcam-images" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="facedetect-webcam-mtcnn-py">
+<h2>facedetect-webcam-mtcnn.py<a class="headerlink" href="#facedetect-webcam-mtcnn-py" title="Permalink to this headline">¶</a></h2>
+<p>Multi-task Cascaded Convolutional Neural Networks (MTCCNN) Face Detection</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">Created on Sep 9, 2017</span>
+<span class="sd">@author: inayat</span>
+<span class="sd">&#39;&#39;&#39;</span>
+
+<span class="c1"># import the required  packages</span>
+<span class="kn">from</span> <span class="nn">imutils.video</span> <span class="k">import</span> <span class="n">WebcamVideoStream</span>
+<span class="c1">#from imutils.video import FPS</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">argparse</span>
+<span class="kn">import</span> <span class="nn">imutils</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">import</span> <span class="nn">cv2</span>
+
+
+
+
+<span class="kn">from</span> <span class="nn">utils</span> <span class="k">import</span> <span class="n">FPS2</span>
+
+<span class="kn">from</span> <span class="nn">utils</span> <span class="k">import</span> <span class="n">mtcnn</span>
+
+<span class="kn">from</span> <span class="nn">utils</span> <span class="k">import</span> <span class="n">extract_draw_faces</span>
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+    
+   
+    
+       
+    
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;[info] starting to read a webcam ...&quot;</span><span class="p">)</span>
+    <span class="n">capWebCam</span> <span class="o">=</span> <span class="n">WebcamVideoStream</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+    <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mf">1.0</span><span class="p">)</span>
+    
+    <span class="c1"># start the frame per second  (FPS) counter</span>
+    <span class="n">fps</span> <span class="o">=</span> <span class="n">FPS2</span><span class="p">()</span><span class="o">.</span><span class="n">start</span><span class="p">()</span> 
+    
+    
+    <span class="c1">#threshold = [0.6,0.6,0.7]</span>
+    <span class="n">threshold</span> <span class="o">=</span> <span class="p">[</span><span class="mf">0.3</span><span class="p">,</span><span class="mf">0.6</span><span class="p">,</span><span class="mf">0.7</span><span class="p">]</span>
+    <span class="n">faceDetector</span> <span class="o">=</span> <span class="n">mtcnn</span><span class="p">()</span>
+    
+    
+    
+    <span class="c1"># loop over the frames obtained from the webcam</span>
+    <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+        <span class="c1"># grab each frame from the threaded  stream,</span>
+        <span class="c1"># resize</span>
+        <span class="c1"># it, and convert it to grayscale (while still retaining 3</span>
+        <span class="c1"># channels)</span>
+        <span class="n">frame1</span> <span class="o">=</span> <span class="n">capWebCam</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+        <span class="n">frame</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">flip</span><span class="p">(</span><span class="n">frame1</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
+        <span class="c1">#frame = imutils.resize(frame, width=450)</span>
+        <span class="c1">#frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)</span>
+        <span class="c1">#frame = np.dstack([frame, frame, frame])</span>
+        
+        <span class="c1"># display the size of the queue on the frame</span>
+        <span class="c1">#cv2.putText(frame, &quot;Queue Size: {}&quot;.format(fvs.Q.qsize()),</span>
+        <span class="c1">#            (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)</span>
+        
+        <span class="n">frame</span><span class="p">,</span> <span class="n">face_imgs</span><span class="p">,</span> <span class="n">face_bboxes</span> <span class="o">=</span> <span class="n">extract_draw_faces</span><span class="p">(</span><span class="n">faceDetector</span><span class="p">,</span><span class="n">frame</span><span class="p">,</span> <span class="n">threshold</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">face_imgs</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+              <span class="n">face_montages</span><span class="o">=</span> <span class="n">imutils</span><span class="o">.</span><span class="n">build_montages</span><span class="p">(</span><span class="n">face_imgs</span><span class="p">,</span> <span class="n">image_shape</span><span class="o">=</span><span class="p">(</span><span class="mi">96</span><span class="p">,</span><span class="mi">96</span><span class="p">),</span> <span class="n">montage_shape</span><span class="o">=</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">face_imgs</span><span class="p">),</span> <span class="mi">1</span><span class="p">))</span>
+              <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">face</span>  <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">face_montages</span><span class="p">):</span>
+                  <span class="c1">#print(i)</span>
+                  <span class="n">cv2</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="s2">&quot;faces montages &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="p">,</span> <span class="n">face</span><span class="p">)</span>
+        
+        <span class="n">fps</span><span class="o">.</span><span class="n">update</span><span class="p">()</span>
+        <span class="n">cv2</span><span class="o">.</span><span class="n">putText</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="s2">&quot;FPS: </span><span class="si">{:.2f}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">fps</span><span class="o">.</span><span class="n">fps</span><span class="p">()),</span>
+                    <span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">50</span><span class="p">),</span> <span class="n">cv2</span><span class="o">.</span><span class="n">FONT_HERSHEY_SIMPLEX</span><span class="p">,</span> <span class="mf">0.6</span><span class="p">,</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">255</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="mi">2</span><span class="p">)</span>
+        
+        
+        <span class="c1"># show the frame and update the FPS counter</span>
+        <span class="n">cv2</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="s2">&quot;Face detection using MTCNN&quot;</span><span class="p">,</span> <span class="n">frame</span><span class="p">)</span>
+        
+        
+        
+        <span class="n">k</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">waitKey</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span> <span class="o">&amp;</span> <span class="mh">0xff</span>
+        <span class="k">if</span> <span class="n">k</span> <span class="o">==</span> <span class="mi">27</span><span class="p">:</span>
+            <span class="k">break</span>
+        
+        
+        
+        
+    <span class="c1"># stop the timer and display FPS information</span>
+    <span class="n">fps</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;[INFO] elasped time: </span><span class="si">{:.2f}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">fps</span><span class="o">.</span><span class="n">elapsed</span><span class="p">()))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;[INFO] approx. FPS: </span><span class="si">{:.2f}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">fps</span><span class="o">.</span><span class="n">fps</span><span class="p">()))</span>
+    
+    <span class="c1"># do a bit of cleanup</span>
+    <span class="n">cv2</span><span class="o">.</span><span class="n">destroyAllWindows</span><span class="p">()</span>
+    <span class="n">capWebCam</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="face-registeration">
+<h1>Face Registeration<a class="headerlink" href="#face-registeration" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="registerpersons-py">
+<h2>registerPersons.py<a class="headerlink" href="#registerpersons-py" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">Created on Dec 5, 2017</span>
+
+<span class="sd">@author: Inayat Khan</span>
+<span class="sd">@email: inayatkh@gmail.com</span>
+<span class="sd">&#39;&#39;&#39;</span>
+
+
+<span class="kn">import</span> <span class="nn">os</span> 
+<span class="kn">import</span> <span class="nn">imutils</span>
+<span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;TF_CPP_MIN_LOG_LEVEL&#39;</span><span class="p">]</span><span class="o">=</span><span class="s1">&#39;2&#39;</span>
+
+
+
+
+<span class="c1">#On python3.x cPickle has changed from cPickle to _pickle</span>
+<span class="kn">import</span> <span class="nn">_pickle</span> <span class="k">as</span> <span class="nn">cPickle</span>
+
+
+<span class="kn">from</span> <span class="nn">keras.models</span> <span class="k">import</span> <span class="n">Model</span>
+
+<span class="kn">from</span> <span class="nn">utils</span> <span class="k">import</span> <span class="n">faceNetModel</span>
+
+
+<span class="kn">from</span> <span class="nn">keras</span> <span class="k">import</span> <span class="n">backend</span> <span class="k">as</span> <span class="n">KB</span>
+<span class="n">KB</span><span class="o">.</span><span class="n">set_image_data_format</span><span class="p">(</span><span class="s1">&#39;channels_first&#39;</span><span class="p">)</span>
+<span class="c1"># We can also set the data_format=&quot;channels_first&quot; by passing it  as an argument to the conv and maxpool layer</span>
+
+<span class="kn">from</span> <span class="nn">utils</span> <span class="k">import</span> <span class="n">load_weights_from_FaceNet</span>
+
+<span class="kn">from</span> <span class="nn">utils</span> <span class="k">import</span> <span class="n">loss_triplet</span>
+
+<span class="kn">from</span> <span class="nn">utils</span> <span class="k">import</span> <span class="n">img_to_encoding</span>
+
+<span class="kn">from</span> <span class="nn">utils</span> <span class="k">import</span> <span class="n">extract_draw_faces</span>
+
+<span class="kn">from</span> <span class="nn">utils</span> <span class="k">import</span> <span class="n">mtcnn</span>
+
+
+
+
+<span class="c1">#</span>
+
+<span class="kn">import</span> <span class="nn">cv2</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+
+
+
+<span class="n">VERBOSE</span> <span class="o">=</span> <span class="kc">True</span>
+<span class="c1">#import datetime</span>
+
+<span class="n">FACES_IMAGES_PATH</span> <span class="o">=</span> <span class="s2">&quot;./images/faces/&quot;</span>
+<span class="n">OUT_REG_FACES_PATH</span> <span class="o">=</span> <span class="s2">&quot;./images/registeredfaces&quot;</span>
+
+<span class="k">def</span> <span class="nf">save_encoded_faces_pickle</span><span class="p">(</span><span class="n">images_path</span><span class="p">,</span><span class="n">out_pic_file_path</span><span class="p">,</span> <span class="n">faceNet</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">      load face images from the images_path, detect faces, encode them and save the results pickle file</span>
+
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">threshold</span> <span class="o">=</span> <span class="p">[</span><span class="mf">0.3</span><span class="p">,</span><span class="mf">0.6</span><span class="p">,</span><span class="mf">0.7</span><span class="p">]</span>
+    <span class="n">faceDetector_mtcnn</span> <span class="o">=</span> <span class="n">mtcnn</span><span class="p">()</span>
+
+    <span class="c1"># prepare our registered people data</span>
+    <span class="c1"># assuming images folder contain individual images in subfolders</span>
+
+    <span class="c1"># each person images are put in corresponding subfolders, and each image of a person contains only face</span>
+
+    <span class="n">person_subfolders</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">images_path</span><span class="p">):</span>
+        <span class="n">ppath</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">images_path</span><span class="p">,</span> <span class="n">p</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">ppath</span><span class="p">):</span>
+            <span class="n">person_subfolders</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ppath</span><span class="p">)</span>
+
+    <span class="c1">#initial person name label Map</span>
+    <span class="n">name_label_map</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="c1"># integer values of each person label</span>
+    <span class="n">labels</span> <span class="o">=</span><span class="p">[]</span>
+
+    <span class="n">person_image_paths</span><span class="o">=</span><span class="p">[]</span>
+
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">person_subfolder</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">person_subfolders</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">person_subfolder</span><span class="p">):</span>
+            <span class="n">ppath</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">person_subfolder</span><span class="p">,</span> <span class="n">p</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">p</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;jpg&#39;</span><span class="p">):</span>
+                <span class="n">person_image_paths</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ppath</span><span class="p">)</span>
+                <span class="n">labels</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+                <span class="n">name_label_map</span><span class="p">[</span><span class="n">p</span><span class="p">]</span> <span class="o">=</span> <span class="n">person_subfolder</span>
+
+    
+    <span class="c1"># now process each person images one by one and encode them using the faceNet model</span>
+    <span class="c1"># we will stored each encodings in face_encodings and their corresponding labels in index dictionary</span>
+
+    <span class="n">index_dic</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">i</span> <span class="o">=</span><span class="mi">0</span>
+    <span class="n">faces_encoding</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="k">for</span> <span class="n">image_path</span> <span class="ow">in</span> <span class="n">person_image_paths</span><span class="p">:</span>
+        <span class="n">debug</span><span class="p">(</span><span class="s2">&quot;encoding face detected in : </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">image_path</span><span class="p">))</span>
+
+        <span class="n">image_cv</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">imread</span><span class="p">(</span><span class="n">image_path</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+
+        <span class="n">img_draw</span><span class="p">,</span> <span class="n">face_imgs</span><span class="p">,</span> <span class="n">face_bboxes</span> <span class="o">=</span> <span class="n">extract_draw_faces</span><span class="p">(</span><span class="n">faceDetector_mtcnn</span><span class="p">,</span> <span class="n">image_cv</span><span class="p">,</span> <span class="n">threshold</span><span class="p">)</span>
+        
+        <span class="n">cv2</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="s2">&quot;face image&quot;</span><span class="p">,</span> <span class="n">img_draw</span><span class="p">)</span>
+        <span class="n">cv2</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="s2">&quot;face&quot;</span><span class="p">,</span> <span class="n">face_imgs</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        
+        
+        
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">face_imgs</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">continue</span>
+        
+        <span class="n">face_cv</span> <span class="o">=</span>  <span class="n">cv2</span><span class="o">.</span><span class="n">resize</span><span class="p">(</span><span class="n">face_imgs</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="p">(</span><span class="mi">96</span><span class="p">,</span><span class="mi">96</span><span class="p">),</span> <span class="n">interpolation</span><span class="o">=</span><span class="n">cv2</span><span class="o">.</span><span class="n">INTER_CUBIC</span><span class="p">)</span>
+        
+        <span class="n">cv2</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="s2">&quot;face 96x96&quot;</span><span class="p">,</span> <span class="n">face_cv</span><span class="p">)</span>
+        <span class="n">cv2</span><span class="o">.</span><span class="n">waitKey</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span>
+        
+        <span class="c1"># we have assumed that a single image will have only the face of the person</span>
+        
+        <span class="c1"># compute the encodings</span>
+        
+        
+        <span class="n">f_encoding</span> <span class="o">=</span> <span class="n">img_to_encoding</span><span class="p">(</span><span class="n">face_cv</span><span class="p">,</span> <span class="n">faceNet</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="n">faces_encoding</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">faces_encoding</span> <span class="o">=</span> <span class="n">f_encoding</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">faces_encoding</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="n">faces_encoding</span><span class="p">,</span> <span class="n">f_encoding</span><span class="p">),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+            
+        <span class="c1"># save the label for this face in index_dic</span>
+        <span class="c1"># later, this will be used for verification or identification of a person</span>
+        <span class="n">index_dic</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">image_path</span>
+        <span class="n">i</span> <span class="o">=</span> <span class="n">i</span><span class="o">+</span><span class="mi">1</span>
+        
+        
+        
+    <span class="c1"># save the face encodings and label index dict</span>
+    
+    <span class="n">np</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">out_pic_file_path</span><span class="p">,</span><span class="s1">&#39;faces_encoding.npy&#39;</span><span class="p">),</span> <span class="n">faces_encoding</span><span class="p">)</span>
+    
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">out_pic_file_path</span><span class="p">,</span><span class="s1">&#39;index_dic.pkl&#39;</span><span class="p">),</span><span class="s1">&#39;wb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span> <span class="p">:</span>
+        <span class="n">cPickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">index_dic</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span>
+        
+        
+            
+        
+        
+        
+            
+        
+    
+    
+<span class="k">def</span> <span class="nf">debug</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="n">msgType</span><span class="o">=</span><span class="s2">&quot;[INFO]&quot;</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+
+<span class="sd">    the _debug  method, which can be used to (optionally) write debugging messages</span>
+
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="c1"># check to see if the message should be printed</span>
+    <span class="k">if</span> <span class="n">VERBOSE</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;**** </span><span class="si">{}</span><span class="s2"> </span><span class="si">{}</span><span class="s2"> -&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\033</span><span class="s1">[92m&#39;</span> <span class="o">+</span> <span class="n">msgType</span> <span class="o">+</span> <span class="s1">&#39;</span><span class="se">\033</span><span class="s1">[0m&#39;</span><span class="p">,</span> <span class="n">msg</span><span class="p">))</span>
+
+    
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+    
+    <span class="n">np</span><span class="o">.</span><span class="n">set_printoptions</span><span class="p">(</span><span class="n">threshold</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">)</span>
+    
+    <span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Loading face Net recognition model ....&quot;</span><span class="p">)</span>
+    
+    <span class="n">faceNet</span> <span class="o">=</span> <span class="n">faceNetModel</span><span class="p">(</span><span class="n">input_shape</span><span class="o">=</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span><span class="mi">96</span><span class="p">,</span><span class="mi">96</span><span class="p">))</span>
+    
+    <span class="n">debug</span><span class="p">(</span><span class="s2">&quot; Total Params of the faceNet model: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">faceNet</span><span class="o">.</span><span class="n">count_params</span><span class="p">()))</span>
+    
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">     FaceNet is trained by minimizing the triplet loss. However, since training</span>
+<span class="sd">     requires a large amount of images and heavy computation. </span>
+<span class="sd">     Therefore, we load a previously trained model</span>
+<span class="sd">     </span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Loading Weights of FaceNet model&quot;</span><span class="p">)</span>
+    <span class="c1">#faceNet.compile(optimizer=&#39;adam&#39;, loss=loss_triplet(alpha=0.2), metrics=[&#39;accuracy&#39;])</span>
+    <span class="n">faceNet</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">optimizer</span><span class="o">=</span><span class="s1">&#39;adam&#39;</span><span class="p">,</span> <span class="n">loss</span><span class="o">=</span><span class="n">loss_triplet</span><span class="p">,</span> <span class="n">metrics</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;accuracy&#39;</span><span class="p">])</span>
+    <span class="n">faceNet</span><span class="o">=</span><span class="n">load_weights_from_FaceNet</span><span class="p">(</span><span class="n">faceNet</span><span class="p">)</span>
+    <span class="n">debug</span><span class="p">(</span><span class="s2">&quot; weights are loaded from the csv files&quot;</span><span class="p">)</span>
+    
+    
+    
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        register persons by encoding their faces </span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">debug</span><span class="p">(</span><span class="s2">&quot; Regitering faces of the person images in </span><span class="si">{}</span><span class="s2"> directory and save the results in </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">FACES_IMAGES_PATH</span><span class="p">,</span> <span class="n">OUT_REG_FACES_PATH</span><span class="p">))</span>
+    <span class="n">save_encoded_faces_pickle</span><span class="p">(</span><span class="n">FACES_IMAGES_PATH</span><span class="p">,</span><span class="n">OUT_REG_FACES_PATH</span><span class="p">,</span> <span class="n">faceNet</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="face-detection-and-recognition-in-test-images">
+<h1>Face Detection and Recognition in test images<a class="headerlink" href="#face-detection-and-recognition-in-test-images" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="recogniseface-py">
+<h2>recogniseFace.py<a class="headerlink" href="#recogniseface-py" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">Created on Nov 24, 2017</span>
+
+<span class="sd">@author: inayatullah khan</span>
+<span class="sd">@email: inayatkh@gmail.com</span>
+
+<span class="sd">face verification : is this the claimed person?, it is a one to one matching problem</span>
+
+<span class="sd">In general for face verification you are given two images and the objectives is to tell whether they are of </span>
+<span class="sd">of the same person or not, </span>
+<span class="sd">&#39;&#39;&#39;</span>
+<span class="c1"># switch off warnings</span>
+<span class="kn">import</span> <span class="nn">os</span> 
+<span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;TF_CPP_MIN_LOG_LEVEL&#39;</span><span class="p">]</span><span class="o">=</span><span class="s1">&#39;2&#39;</span>
+
+<span class="kn">from</span> <span class="nn">keras.models</span> <span class="k">import</span> <span class="n">Sequential</span>
+<span class="kn">from</span> <span class="nn">keras.layers</span> <span class="k">import</span> <span class="n">Conv2D</span><span class="p">,</span> <span class="n">ZeroPadding2D</span><span class="p">,</span> <span class="n">Activation</span><span class="p">,</span> <span class="n">Input</span><span class="p">,</span> <span class="n">concatenate</span>
+<span class="kn">from</span> <span class="nn">keras.models</span> <span class="k">import</span> <span class="n">Model</span>
+<span class="kn">from</span> <span class="nn">keras.layers.normalization</span> <span class="k">import</span> <span class="n">BatchNormalization</span>
+<span class="kn">from</span> <span class="nn">keras.layers.pooling</span> <span class="k">import</span> <span class="n">MaxPooling2D</span><span class="p">,</span> <span class="n">AveragePooling2D</span>
+<span class="kn">from</span> <span class="nn">keras.layers.merge</span> <span class="k">import</span> <span class="n">Concatenate</span>
+<span class="kn">from</span> <span class="nn">keras.layers.core</span> <span class="k">import</span> <span class="n">Lambda</span><span class="p">,</span> <span class="n">Flatten</span><span class="p">,</span> <span class="n">Dense</span>
+<span class="kn">from</span> <span class="nn">keras.initializers</span> <span class="k">import</span> <span class="n">glorot_uniform</span>
+<span class="kn">from</span> <span class="nn">keras.engine.topology</span> <span class="k">import</span> <span class="n">Layer</span>
+
+<span class="kn">from</span> <span class="nn">utils</span> <span class="k">import</span> <span class="n">faceNetModel</span>
+
+<span class="kn">from</span> <span class="nn">utils</span> <span class="k">import</span> <span class="n">load_weights_from_FaceNet</span>
+
+<span class="kn">from</span> <span class="nn">utils</span> <span class="k">import</span> <span class="n">loss_triplet</span>
+
+<span class="kn">from</span> <span class="nn">utils</span> <span class="k">import</span> <span class="n">img_to_encoding</span>
+
+<span class="kn">from</span> <span class="nn">keras</span> <span class="k">import</span> <span class="n">backend</span> <span class="k">as</span> <span class="n">KB</span>
+<span class="n">KB</span><span class="o">.</span><span class="n">set_image_data_format</span><span class="p">(</span><span class="s1">&#39;channels_first&#39;</span><span class="p">)</span>
+<span class="c1"># We can also set the data_format=&quot;channels_first&quot; by passing it  as an argument to the conv and maxpool layer</span>
+
+<span class="kn">from</span> <span class="nn">utils</span> <span class="k">import</span> <span class="n">load_weights</span>
+
+<span class="kn">from</span> <span class="nn">utils</span> <span class="k">import</span> <span class="n">mtcnn</span>
+
+
+
+
+<span class="c1">#</span>
+
+<span class="kn">import</span> <span class="nn">cv2</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">genfromtxt</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">import</span> <span class="nn">tensorflow</span> <span class="k">as</span> <span class="nn">tf</span>
+
+<span class="n">VERBOSE</span> <span class="o">=</span> <span class="kc">True</span>
+<span class="c1">#import datetime</span>
+
+<span class="k">def</span> <span class="nf">debug</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="n">msgType</span><span class="o">=</span><span class="s2">&quot;[INFO]&quot;</span><span class="p">):</span>
+        
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">           the _debug  method, which can be used to (optionally) write debugging messages</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="c1"># check to see if the message should be printed</span>
+        <span class="k">if</span> <span class="n">VERBOSE</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;**** </span><span class="si">{}</span><span class="s2"> </span><span class="si">{}</span><span class="s2"> -&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\033</span><span class="s1">[92m&#39;</span> <span class="o">+</span> <span class="n">msgType</span> <span class="o">+</span> <span class="s1">&#39;</span><span class="se">\033</span><span class="s1">[0m&#39;</span><span class="p">,</span> <span class="n">msg</span><span class="p">))</span>
+        
+    
+<span class="k">def</span> <span class="nf">compute_dist_label</span><span class="p">(</span><span class="n">reg_faces_encodings</span><span class="p">,</span> <span class="n">index_dic</span><span class="p">,</span> <span class="n">test_face_encodings</span><span class="p">,</span> <span class="n">THRESHOLD</span><span class="o">=</span><span class="mf">0.7</span> <span class="p">):</span>
+    
+    
+    <span class="c1"># Calculate Euclidean distances between face encodings calculated on face dectected</span>
+    <span class="c1"># in test image with all the faces encodings calculated while registering persons</span>
+    
+    <span class="c1">#print(&quot;test_face_encodings shape&quot;, test_face_encodings.shape)</span>
+    <span class="c1">#print(&quot;reg_faces_encodings shape&quot;, reg_faces_encodings.shape)</span>
+    <span class="n">distances</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">test_face_encodings</span> <span class="o">-</span><span class="n">reg_faces_encodings</span> <span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="c1">#print(&quot;distances shape&quot;, distances.shape)</span>
+    <span class="c1"># Calculate minimum distance and index of this face</span>
+    <span class="n">argmin</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argmin</span><span class="p">(</span><span class="n">distances</span><span class="p">)</span>  <span class="c1"># index</span>
+    
+    <span class="n">minDistance</span> <span class="o">=</span> <span class="n">distances</span><span class="p">[</span><span class="n">argmin</span><span class="p">]</span>  <span class="c1"># minimum distance</span>
+    
+    <span class="c1"># In general, if two face encodings vectors have a Euclidean</span>
+    <span class="c1"># distance between them less than 0.6 then they are from the same</span>
+    <span class="c1"># person, otherwise they are from different people.</span>
+    
+    <span class="c1"># This threshold will vary depending upon number of images enrolled</span>
+    <span class="c1"># and various variations (illuminaton, camera quality) between</span>
+    <span class="c1"># enrolled images and query image</span>
+    <span class="c1"># We are using a threshold of 0.5</span>
+    
+    <span class="c1"># If minimum distance if less than threshold</span>
+    <span class="c1"># find the name of person from index</span>
+    <span class="c1"># else the person in query image is unknown</span>
+    
+    
+    <span class="n">debug</span><span class="p">(</span><span class="s2">&quot;minDistance = </span><span class="si">{}</span><span class="s2"> , armin=</span><span class="si">{}</span><span class="s2">, registered face =</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">minDistance</span><span class="p">,</span> <span class="n">argmin</span><span class="p">,</span> <span class="n">index_dic</span><span class="p">[</span><span class="n">argmin</span><span class="p">]))</span>
+    
+    <span class="k">if</span> <span class="n">minDistance</span> <span class="o">&lt;=</span> <span class="n">THRESHOLD</span><span class="p">:</span>
+        <span class="c1">#label = os.path.splitext(os.path.basename(index_dic[argmin]).split(&#39;_&#39;)[0])[0]</span>
+        <span class="n">label</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">index_dic</span><span class="p">[</span><span class="n">argmin</span><span class="p">])</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">])[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">label</span> <span class="o">=</span> <span class="s1">&#39;unknown&#39;</span>
+        
+    
+    <span class="k">return</span> <span class="p">(</span><span class="n">minDistance</span><span class="p">,</span> <span class="n">label</span><span class="p">)</span>
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+    
+    <span class="n">np</span><span class="o">.</span><span class="n">set_printoptions</span><span class="p">(</span><span class="n">threshold</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">)</span>
+    
+    <span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Loading Deep face Net recognition model ....&quot;</span><span class="p">)</span>
+    <span class="n">faceNet</span> <span class="o">=</span> <span class="n">faceNetModel</span><span class="p">(</span><span class="n">input_shape</span><span class="o">=</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span><span class="mi">96</span><span class="p">,</span><span class="mi">96</span><span class="p">))</span>
+    
+    <span class="n">debug</span><span class="p">(</span><span class="s2">&quot; Total Params of the faceNet model: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">faceNet</span><span class="o">.</span><span class="n">count_params</span><span class="p">()))</span>
+    
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">     FaceNet is trained by minimizing the triplet loss. However, since training</span>
+<span class="sd">     requires a large amount of images and heavy computation. </span>
+<span class="sd">     Therefore, we load a previously trained model</span>
+<span class="sd">     </span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Loading Weights of FaceNet model&quot;</span><span class="p">)</span>
+    <span class="c1">#faceNet.compile(optimizer=&#39;adam&#39;, loss=loss_triplet(alpha=0.2), metrics=[&#39;accuracy&#39;])</span>
+    <span class="n">faceNet</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">optimizer</span><span class="o">=</span><span class="s1">&#39;adam&#39;</span><span class="p">,</span> <span class="n">loss</span><span class="o">=</span><span class="n">loss_triplet</span><span class="p">,</span> <span class="n">metrics</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;accuracy&#39;</span><span class="p">])</span>
+    <span class="n">faceNet</span><span class="o">=</span><span class="n">load_weights_from_FaceNet</span><span class="p">(</span><span class="n">faceNet</span><span class="p">)</span>
+    <span class="n">debug</span><span class="p">(</span><span class="s2">&quot; weights are loaded from the csv files&quot;</span><span class="p">)</span>
+    
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    MTCNN face detection</span>
+<span class="sd">    </span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    
+    
+    
+    <span class="c1">#threshold = [0.6,0.6,0.7]</span>
+    
+    <span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Loading Deep face Detector (MTCNN) recognition model ....&quot;</span><span class="p">)</span>
+    <span class="n">threshold</span> <span class="o">=</span> <span class="p">[</span><span class="mf">0.3</span><span class="p">,</span><span class="mf">0.6</span><span class="p">,</span><span class="mf">0.7</span><span class="p">]</span>
+    <span class="n">faceDetector</span> <span class="o">=</span> <span class="n">mtcnn</span><span class="p">()</span>
+    
+    
+    
+    <span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Loading Registered Persons faces encodings and index files generated with registerPerson.py ....&quot;</span><span class="p">)</span>
+    
+    <span class="n">REG_PERSONS_PATH</span> <span class="o">=</span> <span class="s1">&#39;./images/registeredfaces&#39;</span>
+    
+    <span class="n">REG_FACES_ENCODIMGS_FILE</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">REG_PERSONS_PATH</span><span class="p">,</span> <span class="s1">&#39;faces_encoding.npy&#39;</span><span class="p">)</span>
+    <span class="n">REG_FACES_INDEX_FILE</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">REG_PERSONS_PATH</span><span class="p">,</span> <span class="s1">&#39;index_dic.pkl&#39;</span><span class="p">)</span>
+    
+    <span class="n">index_dic</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">REG_FACES_INDEX_FILE</span><span class="p">)</span>
+    <span class="n">reg_faces_encodings</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">REG_FACES_ENCODIMGS_FILE</span><span class="p">)</span>
+    
+    <span class="n">test_images_path</span> <span class="o">=</span> <span class="s1">&#39;./images&#39;</span>
+    
+    <span class="k">for</span> <span class="n">img_file_name</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">test_images_path</span><span class="p">):</span>
+        <span class="n">img_file_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">test_images_path</span><span class="p">,</span> <span class="n">img_file_name</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">img_file_path</span><span class="p">):</span>
+            <span class="n">test_img</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">imread</span><span class="p">(</span><span class="n">img_file_path</span><span class="p">)</span>
+            <span class="n">test_img_draw</span> <span class="o">=</span> <span class="n">test_img</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+            <span class="n">thickness</span> <span class="o">=</span> <span class="p">(</span><span class="n">test_img</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">test_img</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">//</span> <span class="mi">300</span>
+            <span class="n">debug</span><span class="p">(</span><span class="s1">&#39;detecting face in file : </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">img_file_path</span><span class="p">))</span>
+            
+            <span class="n">bboxes_shapes</span> <span class="o">=</span> <span class="n">faceDetector</span><span class="o">.</span><span class="n">detectFace</span><span class="p">(</span><span class="n">test_img</span><span class="p">,</span> <span class="n">threshold</span><span class="p">)</span>
+            
+            <span class="k">for</span> <span class="n">bbox_shape</span> <span class="ow">in</span> <span class="n">bboxes_shapes</span><span class="p">:</span>
+
+                <span class="k">if</span> <span class="n">bbox_shape</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+
+                    <span class="n">top</span><span class="p">,</span> <span class="n">left</span><span class="p">,</span> <span class="n">bottom</span><span class="p">,</span> <span class="n">right</span> <span class="o">=</span> <span class="n">bbox_shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">bbox_shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">bbox_shape</span><span class="p">[</span><span class="mi">3</span><span class="p">],</span> <span class="n">bbox_shape</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+
+                    <span class="n">top</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">top</span> <span class="o">+</span> <span class="mf">0.5</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s1">&#39;int32&#39;</span><span class="p">))</span>
+                    <span class="n">left</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">left</span> <span class="o">+</span> <span class="mf">0.5</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s1">&#39;int32&#39;</span><span class="p">))</span>
+                    <span class="c1">#bottom = min(test_img.shape[1], np.floor(bottom + 0.5).astype(&#39;int32&#39;))</span>
+                    <span class="n">bottom</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">test_img</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">bottom</span> <span class="o">+</span> <span class="mf">0.5</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s1">&#39;int32&#39;</span><span class="p">))</span>
+                    <span class="c1">#right = min(test_img.shape[0], np.floor(right + 0.5).astype(&#39;int32&#39;))</span>
+                    <span class="n">right</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">test_img</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">right</span> <span class="o">+</span> <span class="mf">0.5</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s1">&#39;int32&#39;</span><span class="p">))</span>
+
+                    <span class="c1">#face_bboxes.append([top, left, bottom, right])</span>
+                    <span class="n">test_face_img</span> <span class="o">=</span> <span class="n">test_img</span><span class="p">[</span><span class="n">top</span><span class="p">:</span><span class="n">bottom</span><span class="p">,</span> <span class="n">left</span><span class="p">:</span><span class="n">right</span><span class="p">]</span>
+                    
+                    
+                    
+                    <span class="c1">### encoding test_face</span>
+                    
+                    <span class="n">test_face_img</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">resize</span><span class="p">(</span><span class="n">test_face_img</span><span class="p">,</span> <span class="p">(</span><span class="mi">96</span><span class="p">,</span><span class="mi">96</span><span class="p">),</span> <span class="n">interpolation</span><span class="o">=</span><span class="n">cv2</span><span class="o">.</span><span class="n">INTER_CUBIC</span><span class="p">)</span>
+                    
+                    <span class="n">test_face_encodings</span> <span class="o">=</span> <span class="n">img_to_encoding</span><span class="p">(</span><span class="n">test_face_img</span><span class="p">,</span> <span class="n">faceNet</span><span class="p">)</span>
+                    <span class="n">dist</span><span class="p">,</span> <span class="n">identity</span><span class="o">=</span><span class="n">compute_dist_label</span><span class="p">(</span><span class="n">reg_faces_encodings</span><span class="p">,</span> <span class="n">index_dic</span><span class="p">,</span> <span class="n">test_face_encodings</span><span class="p">,</span> <span class="n">THRESHOLD</span><span class="o">=</span><span class="mf">0.7</span> <span class="p">)</span>
+                    <span class="c1">#cv2.imwrite(identity+&quot;.jpg&quot;, test_face_img)</span>
+                    <span class="c1">######## drawing faces and labels or person names</span>
+                    
+                    <span class="n">start_pt</span> <span class="o">=</span> <span class="p">(</span><span class="n">left</span><span class="p">,</span> <span class="n">top</span><span class="p">)</span>
+                    <span class="n">end_pt</span> <span class="o">=</span> <span class="p">(</span><span class="n">right</span><span class="p">,</span> <span class="n">bottom</span><span class="p">)</span>
+                    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">thickness</span><span class="p">):</span>
+                        <span class="n">start_pt</span> <span class="o">=</span> <span class="p">(</span><span class="n">left</span><span class="o">+</span><span class="n">i</span><span class="p">,</span> <span class="n">top</span><span class="o">+</span><span class="n">i</span><span class="p">)</span>
+                        <span class="n">end_pt</span> <span class="o">=</span> <span class="p">(</span><span class="n">right</span><span class="o">-</span><span class="n">i</span><span class="p">,</span> <span class="n">bottom</span><span class="o">-</span><span class="n">i</span><span class="p">)</span>
+                        <span class="n">cv2</span><span class="o">.</span><span class="n">rectangle</span><span class="p">(</span><span class="n">test_img_draw</span><span class="p">,</span> <span class="n">start_pt</span><span class="p">,</span> <span class="n">end_pt</span><span class="p">,</span> <span class="p">(</span><span class="mi">255</span><span class="p">,</span> <span class="mi">255</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="mi">1</span><span class="p">)</span>
+                        
+                    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">15</span><span class="p">,</span> <span class="mi">2</span><span class="p">):</span>
+                        <span class="n">cv2</span><span class="o">.</span><span class="n">circle</span><span class="p">(</span><span class="n">test_img_draw</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">bbox_shape</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">0</span><span class="p">]),</span> <span class="nb">int</span><span class="p">(</span><span class="n">bbox_shape</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">])),</span> <span class="mi">2</span><span class="p">,</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">255</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
+                        
+                    <span class="n">person_id_tag</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="s2">: </span><span class="si">%.2f</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">identity</span><span class="p">,</span> <span class="n">dist</span><span class="p">)</span>                    
+                    <span class="n">text_end_pt</span>   <span class="o">=</span> <span class="p">(</span><span class="n">left</span> <span class="o">+</span>  <span class="nb">len</span><span class="p">(</span><span class="n">person_id_tag</span><span class="p">)</span> <span class="o">*</span> <span class="mi">7</span> <span class="p">,</span> <span class="n">top</span> <span class="o">-</span> <span class="mi">10</span> <span class="p">)</span>
+                    <span class="n">text_start_pt</span> <span class="o">=</span> <span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="n">left</span><span class="p">,</span> <span class="mi">10</span><span class="p">),</span> <span class="nb">max</span><span class="p">(</span><span class="n">top</span><span class="p">,</span> <span class="mi">10</span><span class="p">))</span>
+                    
+                    <span class="n">cv2</span><span class="o">.</span><span class="n">rectangle</span><span class="p">(</span><span class="n">test_img_draw</span><span class="p">,</span> <span class="p">(</span><span class="n">left</span><span class="p">,</span><span class="n">top</span><span class="p">),</span> <span class="n">text_end_pt</span><span class="p">,</span>
+                                  <span class="p">(</span><span class="mi">255</span><span class="p">,</span><span class="mi">255</span><span class="p">,</span><span class="mi">0</span><span class="p">),</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">cv2</span><span class="o">.</span><span class="n">LINE_AA</span><span class="p">)</span>
+                    <span class="n">cv2</span><span class="o">.</span><span class="n">putText</span><span class="p">(</span><span class="n">test_img_draw</span><span class="p">,</span> <span class="n">person_id_tag</span><span class="p">,</span> <span class="n">text_start_pt</span><span class="p">,</span> <span class="n">cv2</span><span class="o">.</span><span class="n">FONT_ITALIC</span><span class="p">,</span><span class="mf">0.4</span><span class="p">,</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">),</span> <span class="mi">1</span><span class="p">)</span>
+            
+            
+        
+            <span class="n">cv2</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="s2">&quot;face Identification&quot;</span><span class="p">,</span> <span class="n">test_img_draw</span><span class="p">)</span>
+            <span class="n">cv2</span><span class="o">.</span><span class="n">waitKey</span><span class="p">()</span>    
+    
+    <span class="c1">######################################</span>
+    
+    
+                
+    
+    
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="utility-modules">
+<h1>Utility Modules<a class="headerlink" href="#utility-modules" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="facerecog-py">
+<h2>facerecog.py<a class="headerlink" href="#facerecog-py" title="Permalink to this headline">¶</a></h2>
+<p>This implements the triple loss function.</p>
+<span class="target" id="module-utils.facerecog"></span><p>Created on Nov 28, 2017</p>
+<p>&#64;author: Inayatullah Khan
+&#64;email: <a class="reference external" href="mailto:inayatkh&#37;&#52;&#48;gmail&#46;com">inayatkh<span>&#64;</span>gmail<span>&#46;</span>com</a></p>
+<p>In this module the necessary function related to model training  are defined.</p>
+<dl class="function">
+<dt id="utils.facerecog.loss_triplet">
+<code class="descclassname">utils.facerecog.</code><code class="descname">loss_triplet</code><span class="sig-paren">(</span><em>y_true</em>, <em>y_pred</em>, <em>alpha=0.2</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/facerecog.html#loss_triplet"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#utils.facerecog.loss_triplet" title="Permalink to this definition">¶</a></dt>
+<dd><p>Implementation of the triplet loss function, details are explained bellow</p>
+<div class="math">
+<p><img src="_images/math/2c00d8285c69c69df39fd70ed862d17c6824c290.png" alt="\mathcal{J} = \sum^{m}_{i=1} \large[ \small \underbrace{\mid \mid f(A^{(i)}) - f(P^{(i)}) \mid \mid_2^2}_\text{(1)} - \underbrace{\mid \mid f(A^{(i)}) - f(N^{(i)}) \mid \mid_2^2}_\text{(2)} + \alpha \large ] \small_+"/></p>
+</div><p>Here, the notation <img class="math" src="_images/math/72c53bd434cf41d6e0b09ea35082cf38174636f9.png" alt="[z]_+"/>  is used to denote <img class="math" src="_images/math/c0de868a69c3d48d978aeb978dbf8a2831bb059e.png" alt="max(z,0)"/></p>
+<p>We want the term (1) to be small where it is the distance between the anchor image encodings “A” and 
+the positive “P” for a given triplet.</p>
+<p>We want the term (2) to be relatively large, where it is the squared distance between the anchor “A”
+and the negative “N” for a given triplet.</p>
+<p><img class="math" src="_images/math/877d234f4cec6974ce218fc2e975a486a7972dfd.png" alt="\alpha"/> is  the hyperparameter called the margin which should be picked manually.
+The dafault value is  <img class="math" src="_images/math/011facfd2d666adbae8e61251f16f80318d2c685.png" alt="\alpha=0.2"/></p>
+<p>Arguments:</p>
+<p>y_true – true labels, required when you define a loss in Keras, you don’t need it in this function.</p>
+<p>y_pred – python list containing three objects:</p>
+<blockquote>
+<div><p>anchor – the encodings for the anchor images, of shape (None, 128)</p>
+<p>positive – the encodings for the positive images, of shape (None, 128)</p>
+<p>negative – the encodings for the negative images, of shape (None, 128)</p>
+</div></blockquote>
+<p>Returns:</p>
+<p>loss – real number, value of the loss</p>
+</dd></dl>
+
+</div>
+<div class="section" id="mtcnn-py">
+<h2>mtcnn.py<a class="headerlink" href="#mtcnn-py" title="Permalink to this headline">¶</a></h2>
+<p>This utility package implements Class mtccnn and Class tools.</p>
+<span class="target" id="module-utils.mtcnn"></span><p>Created on Nov 30, 2017</p>
+<p>&#64;author: Inayatullah Khan
+&#64;email: <a class="reference external" href="mailto:inayatkh&#37;&#52;&#48;gmail&#46;com">inayatkh<span>&#64;</span>gmail<span>&#46;</span>com</a></p>
+<p>In this utility module some code and ideas are taken from the Keras Implementation of Joint Face Detection and Alignment
+using <a class="reference external" href="https://github.com/xiangrufan/keras-mtcnn">Multi-task Cascaded Convolutional Neural Networks MTCCNN</a>.</p>
+<p>Which is basically  transplanted from MTCNN-caffe from CongweiLin’s <a class="reference external" href="https://github.com/CongWeilin/mtcnn-caffe">&lt;https://github repository</a></p>
+<dl class="class">
+<dt id="utils.mtcnn.mtcnn">
+<em class="property">class </em><code class="descclassname">utils.mtcnn.</code><code class="descname">mtcnn</code><span class="sig-paren">(</span><em>kao_pnet_weight_path='./models/mtcnn/12net.h5'</em>, <em>kao_rnet_weight_path='./models/mtcnn/24net.h5'</em>, <em>kao_onet_weight_path='./models/mtcnn/48net.h5'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/mtcnn.html#mtcnn"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#utils.mtcnn.mtcnn" title="Permalink to this definition">¶</a></dt>
+<dd><p>This class implements the MTCNN face detector</p>
+<dl class="method">
+<dt id="utils.mtcnn.mtcnn.detectFace">
+<code class="descname">detectFace</code><span class="sig-paren">(</span><em>img</em>, <em>threshold</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/mtcnn.html#mtcnn.detectFace"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#utils.mtcnn.mtcnn.detectFace" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="utils.mtcnn.tools">
+<em class="property">class </em><code class="descclassname">utils.mtcnn.</code><code class="descname">tools</code><a class="reference internal" href="_modules/utils/mtcnn.html#tools"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#utils.mtcnn.tools" title="Permalink to this definition">¶</a></dt>
+<dd><p>This class implements some important functions, which are mainly defined as static methods. These
+methods or functions are used by the mtcnn face detector</p>
+<dl class="staticmethod">
+<dt id="utils.mtcnn.tools.NMS">
+<em class="property">static </em><code class="descname">NMS</code><span class="sig-paren">(</span><em>rectangles</em>, <em>threshold</em>, <em>type</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/mtcnn.html#tools.NMS"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#utils.mtcnn.tools.NMS" title="Permalink to this definition">¶</a></dt>
+<dd><blockquote>
+<div><dl class="docutils">
+<dt>Function:</dt>
+<dd>apply NMS(non-maximum suppression) on ROIs in same scale(matrix version)</dd>
+</dl>
+</div></blockquote>
+<dl class="docutils">
+<dt>Input:</dt>
+<dd>rectangles: rectangles[i][0:3] is the position, rectangles[i][4] is score</dd>
+<dt>Output:</dt>
+<dd>rectangles: same as input</dd>
+</dl>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="utils.mtcnn.tools.calculateScales">
+<em class="property">static </em><code class="descname">calculateScales</code><span class="sig-paren">(</span><em>img</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/mtcnn.html#tools.calculateScales"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#utils.mtcnn.tools.calculateScales" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="docutils">
+<dt>Function:</dt>
+<dd>calculate multi-scale and limit the maxinum side to 1000</dd>
+<dt>Input:</dt>
+<dd>img: original image</dd>
+<dt>Output:</dt>
+<dd>pr_scale: limit the maxinum side to 1000, &lt; 1.0
+scales  : Multi-scale</dd>
+</dl>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="utils.mtcnn.tools.detect_face_12net">
+<em class="property">static </em><code class="descname">detect_face_12net</code><span class="sig-paren">(</span><em>cls_prob</em>, <em>roi</em>, <em>out_side</em>, <em>scale</em>, <em>width</em>, <em>height</em>, <em>threshold</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/mtcnn.html#tools.detect_face_12net"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#utils.mtcnn.tools.detect_face_12net" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="docutils">
+<dt>Function:</dt>
+<dd>Detect face position and calibrate bounding box on 12net feature map(matrix version)</dd>
+<dt>Input:</dt>
+<dd>cls_prob : softmax feature map for face classify
+roi      : feature map for regression
+out_side : feature map’s largest size
+scale    : current input image scale in multi-scales
+width    : image’s origin width
+height   : image’s origin height
+threshold: 0.6 can have 99% recall rate</dd>
+</dl>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="utils.mtcnn.tools.filter_face_24net">
+<em class="property">static </em><code class="descname">filter_face_24net</code><span class="sig-paren">(</span><em>cls_prob</em>, <em>roi</em>, <em>rectangles</em>, <em>width</em>, <em>height</em>, <em>threshold</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/mtcnn.html#tools.filter_face_24net"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#utils.mtcnn.tools.filter_face_24net" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="docutils">
+<dt>Function:</dt>
+<dd>Filter face position and calibrate bounding box on 12net’s output</dd>
+<dt>Input:</dt>
+<dd>cls_prob  : softmax feature map for face classify
+roi_prob  : feature map for regression
+rectangles: 12net’s predict
+width     : image’s origin width
+height    : image’s origin height
+hreshold : 0.6 can have 97% recall rate</dd>
+<dt>Output:</dt>
+<dd>rectangles: possible face positions</dd>
+</dl>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="utils.mtcnn.tools.filter_face_48net">
+<em class="property">static </em><code class="descname">filter_face_48net</code><span class="sig-paren">(</span><em>cls_prob</em>, <em>roi</em>, <em>pts</em>, <em>rectangles</em>, <em>width</em>, <em>height</em>, <em>threshold</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/mtcnn.html#tools.filter_face_48net"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#utils.mtcnn.tools.filter_face_48net" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="docutils">
+<dt>Function:</dt>
+<dd>Filter face position and calibrate bounding box on 12net’s output</dd>
+<dt>Input:</dt>
+<dd>cls_prob  : cls_prob[1] is face possibility
+roi       : roi offset
+pts       : 5 landmark
+rectangles: 12net’s predict, rectangles[i][0:3] is the position, rectangles[i][4] is score
+width     : image’s origin width
+height    : image’s origin height
+threshold : 0.7 can have 94% recall rate on CelebA-database</dd>
+<dt>Output:</dt>
+<dd>rectangles: face positions and landmarks</dd>
+</dl>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="utils.mtcnn.tools.filter_face_48net_newdef">
+<em class="property">static </em><code class="descname">filter_face_48net_newdef</code><span class="sig-paren">(</span><em>cls_prob</em>, <em>roi</em>, <em>pts</em>, <em>rectangles</em>, <em>width</em>, <em>height</em>, <em>threshold</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/mtcnn.html#tools.filter_face_48net_newdef"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#utils.mtcnn.tools.filter_face_48net_newdef" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="docutils">
+<dt>Function:</dt>
+<dd>calculate   landmark point , new def</dd>
+<dt>Input:</dt>
+<dd>cls_prob  : cls_prob[1] is face possibility
+roi       : roi offset
+pts       : 5 landmark
+rectangles: 12net’s predict, rectangles[i][0:3] is the position, rectangles[i][4] is score
+width     : image’s origin width
+height    : image’s origin height
+threshold : 0.7 can have 94% recall rate on CelebA-database</dd>
+<dt>Output:</dt>
+<dd>rectangles: face positions and landmarks</dd>
+</dl>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="utils.mtcnn.tools.imglist_meanvalue">
+<em class="property">static </em><code class="descname">imglist_meanvalue</code><span class="sig-paren">(</span><em>img_nparray</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/mtcnn.html#tools.imglist_meanvalue"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#utils.mtcnn.tools.imglist_meanvalue" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="docutils">
+<dt>Function:</dt>
+<dd>calculate mean value of img_list for double checck img quality</dd>
+<dt>Input:</dt>
+<dd>img_nparray: numpy array of input</dd>
+<dt>Output:</dt>
+<dd>img_nparray: numpy array of img mean value</dd>
+</dl>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="utils.mtcnn.tools.rect2square">
+<em class="property">static </em><code class="descname">rect2square</code><span class="sig-paren">(</span><em>rectangles</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/mtcnn.html#tools.rect2square"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#utils.mtcnn.tools.rect2square" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="docutils">
+<dt>Function:</dt>
+<dd>change rectangles into squares (matrix version)</dd>
+<dt>Input:</dt>
+<dd>rectangles: rectangles[i][0:3] is the position, rectangles[i][4] is score</dd>
+<dt>Output:</dt>
+<dd>squares: same as input</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-utils.facenet">
+<span id="facenet-py"></span><h2>facenet.py<a class="headerlink" href="#module-utils.facenet" title="Permalink to this headline">¶</a></h2>
+<p>Created on Nov 24, 2017</p>
+<p>&#64;author: <a class="reference external" href="mailto:inayatkh&#37;&#52;&#48;gmail&#46;com">inayatkh<span>&#64;</span>gmail<span>&#46;</span>com</a></p>
+<p>The facenet.py module contains code related to <a class="reference external" href="https://arxiv.org/pdf/1503.03832.pdf">faceNet</a>,
+which follows the inception <a class="reference external" href="https://arxiv.org/abs/1409.4842">Deep Net</a>.</p>
+<p>A part of these utilities function are taken from <a class="reference external" href="http://cmusatyalab.github.io/openface/">OpenFace</a>
+and its Tensorflow or Keras  utilitiies implementation:</p>
+<ul class="simple">
+<li><a class="reference external" href="https://github.com/iwantooxxoox/Keras-OpenFace/blob/master/utils.py">Keras-OpenFace</a></li>
+</ul>
+<dl class="function">
+<dt id="utils.facenet.img_file_to_encoding">
+<code class="descclassname">utils.facenet.</code><code class="descname">img_file_to_encoding</code><span class="sig-paren">(</span><em>image_cv</em>, <em>model</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/facenet.html#img_file_to_encoding"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#utils.facenet.img_file_to_encoding" title="Permalink to this definition">¶</a></dt>
+<dd><p>Encodes a given image to 128 dim vector by passing it to the network model</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="utils.facenet.img_to_encoding">
+<code class="descclassname">utils.facenet.</code><code class="descname">img_to_encoding</code><span class="sig-paren">(</span><em>image_cv</em>, <em>model</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/facenet.html#img_to_encoding"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#utils.facenet.img_to_encoding" title="Permalink to this definition">¶</a></dt>
+<dd><p>Encodes a given image to 128 dim vector by passing it to the network model</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="utils.facenet.load_weights">
+<code class="descclassname">utils.facenet.</code><code class="descname">load_weights</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/facenet.html#load_weights"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#utils.facenet.load_weights" title="Permalink to this definition">¶</a></dt>
+<dd><p>this loads weights of the inception network, faceNet from the csv files in the weights folder
+and returns weights dictionary</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-utils.facenetmodel">
+<span id="facenetmodel-py"></span><h2>facenetmodel.py<a class="headerlink" href="#module-utils.facenetmodel" title="Permalink to this headline">¶</a></h2>
+<p>Created on Nov 24, 2017</p>
+<p>&#64;author: inayat</p>
+<dl class="function">
+<dt id="utils.facenetmodel.faceNetModel">
+<code class="descclassname">utils.facenetmodel.</code><code class="descname">faceNetModel</code><span class="sig-paren">(</span><em>input_shape</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/facenetmodel.html#faceNetModel"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#utils.facenetmodel.faceNetModel" title="Permalink to this definition">¶</a></dt>
+<dd><p>Implementation of the Inception model used for FaceNet</p>
+<p>Arguments:
+input_shape – shape of the images of the dataset</p>
+<p>Returns:
+model – a Model() instance in Keras</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="utils.facenetmodel.inception_block_1a">
+<code class="descclassname">utils.facenetmodel.</code><code class="descname">inception_block_1a</code><span class="sig-paren">(</span><em>X</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/facenetmodel.html#inception_block_1a"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#utils.facenetmodel.inception_block_1a" title="Permalink to this definition">¶</a></dt>
+<dd><p>Implementation of an inception block</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-utils.fps2">
+<span id="fps2-py"></span><h2>fps2.py<a class="headerlink" href="#module-utils.fps2" title="Permalink to this headline">¶</a></h2>
+<p>Created on Sep 9, 2017
+&#64;author: inayat (<a class="reference external" href="mailto:inayatkh&#37;&#52;&#48;gmail&#46;com">inayatkh<span>&#64;</span>gmail<span>&#46;</span>com</a>)</p>
+<dl class="class">
+<dt id="utils.fps2.FPS2">
+<em class="property">class </em><code class="descclassname">utils.fps2.</code><code class="descname">FPS2</code><a class="reference internal" href="_modules/utils/fps2.html#FPS2"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#utils.fps2.FPS2" title="Permalink to this definition">¶</a></dt>
+<dd><p>FPS2 class is used to calculate the frames per second time</p>
+<dl class="method">
+<dt id="utils.fps2.FPS2.elapsed">
+<code class="descname">elapsed</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/fps2.html#FPS2.elapsed"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#utils.fps2.FPS2.elapsed" title="Permalink to this definition">¶</a></dt>
+<dd><p>return the total number of seconds between the start and
+end interval</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="utils.fps2.FPS2.fps">
+<code class="descname">fps</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/fps2.html#FPS2.fps"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#utils.fps2.FPS2.fps" title="Permalink to this definition">¶</a></dt>
+<dd><p>compute the (approximate) frames per second</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="utils.fps2.FPS2.start">
+<code class="descname">start</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/fps2.html#FPS2.start"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#utils.fps2.FPS2.start" title="Permalink to this definition">¶</a></dt>
+<dd><p>start the timer</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="utils.fps2.FPS2.stop">
+<code class="descname">stop</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/fps2.html#FPS2.stop"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#utils.fps2.FPS2.stop" title="Permalink to this definition">¶</a></dt>
+<dd><p>stop the timer</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="utils.fps2.FPS2.update">
+<code class="descname">update</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/fps2.html#FPS2.update"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#utils.fps2.FPS2.update" title="Permalink to this definition">¶</a></dt>
+<dd><p>increment the total number of frames examined during the
+start and end intervals</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-utils.facedetect">
+<span id="facedetect-py"></span><h2>facedetect.py<a class="headerlink" href="#module-utils.facedetect" title="Permalink to this headline">¶</a></h2>
+<p>Created on Dec 5, 2017</p>
+<p>&#64;author: inayat</p>
+<dl class="function">
+<dt id="utils.facedetect.extract_draw_faces">
+<code class="descclassname">utils.facedetect.</code><code class="descname">extract_draw_faces</code><span class="sig-paren">(</span><em>faceDetector, img, threshold=[0.3, 0.6, 0.7]</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/facedetect.html#extract_draw_faces"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#utils.facedetect.extract_draw_faces" title="Permalink to this definition">¶</a></dt>
+<dd><p>implementation of drawing bounding boxes around detected faces using the mtcnn detector</p>
+</dd></dl>
+
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="index.html" title="previous chapter">Welcome to Face Verification’s documentation!</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, Inayatullah Khan (inayatkh@gmail.com).
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.5</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+      |
+      <a href="_sources/code.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

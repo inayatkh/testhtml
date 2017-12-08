@@ -1,0 +1,169 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>utils.facerecog &#8212; Face Verification 1.0 documentation</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for utils.facerecog</h1><div class="highlight"><pre>
+<span></span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">Created on Nov 28, 2017</span>
+
+<span class="sd">@author: Inayatullah Khan</span>
+<span class="sd">@email: inayatkh@gmail.com</span>
+
+<span class="sd">In this module the necessary function related to model training  are defined.</span>
+<span class="sd">&#39;&#39;&#39;</span>
+
+<span class="kn">from</span> <span class="nn">keras.models</span> <span class="k">import</span> <span class="n">Sequential</span>
+<span class="kn">from</span> <span class="nn">keras.layers</span> <span class="k">import</span> <span class="n">Conv2D</span><span class="p">,</span> <span class="n">ZeroPadding2D</span><span class="p">,</span> <span class="n">Activation</span><span class="p">,</span> <span class="n">Input</span><span class="p">,</span> <span class="n">concatenate</span>
+<span class="kn">from</span> <span class="nn">keras.models</span> <span class="k">import</span> <span class="n">Model</span>
+<span class="kn">from</span> <span class="nn">keras.layers.normalization</span> <span class="k">import</span> <span class="n">BatchNormalization</span>
+<span class="kn">from</span> <span class="nn">keras.layers.pooling</span> <span class="k">import</span> <span class="n">MaxPooling2D</span><span class="p">,</span> <span class="n">AveragePooling2D</span>
+<span class="kn">from</span> <span class="nn">keras.layers.merge</span> <span class="k">import</span> <span class="n">Concatenate</span>
+<span class="kn">from</span> <span class="nn">keras.layers.core</span> <span class="k">import</span> <span class="n">Lambda</span><span class="p">,</span> <span class="n">Flatten</span><span class="p">,</span> <span class="n">Dense</span>
+<span class="kn">from</span> <span class="nn">keras.initializers</span> <span class="k">import</span> <span class="n">glorot_uniform</span>
+<span class="kn">from</span> <span class="nn">keras.engine.topology</span> <span class="k">import</span> <span class="n">Layer</span>
+<span class="kn">from</span> <span class="nn">keras</span> <span class="k">import</span> <span class="n">backend</span> <span class="k">as</span> <span class="n">KB</span>
+<span class="n">KB</span><span class="o">.</span><span class="n">set_image_data_format</span><span class="p">(</span><span class="s1">&#39;channels_first&#39;</span><span class="p">)</span>
+<span class="kn">import</span> <span class="nn">cv2</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">genfromtxt</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">import</span> <span class="nn">tensorflow</span> <span class="k">as</span> <span class="nn">tf</span>
+
+
+<div class="viewcode-block" id="loss_triplet"><a class="viewcode-back" href="../../code.html#utils.facerecog.loss_triplet">[docs]</a><span class="k">def</span> <span class="nf">loss_triplet</span><span class="p">(</span><span class="n">y_true</span><span class="p">,</span> <span class="n">y_pred</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.2</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Implementation of the triplet loss function, details are explained bellow</span>
+
+<span class="sd">    .. math::</span>
+
+<span class="sd">        \\mathcal{J} = \\sum^{m}_{i=1} \\large[ \\small \\underbrace{\\mid \\mid f(A^{(i)}) - f(P^{(i)}) \\mid \\mid_2^2}_\\text{(1)} - \\underbrace{\\mid \\mid f(A^{(i)}) - f(N^{(i)}) \\mid \\mid_2^2}_\\text{(2)} + \\alpha \\large ] \\small_+</span>
+<span class="sd">    Here, the notation :math:`[z]_+`  is used to denote :math:`max(z,0)`</span>
+
+<span class="sd">    We want the term (1) to be small where it is the distance between the anchor image encodings &quot;A&quot; and </span>
+<span class="sd">    the positive &quot;P&quot; for a given triplet.</span>
+
+<span class="sd">    We want the term (2) to be relatively large, where it is the squared distance between the anchor &quot;A&quot;</span>
+<span class="sd">    and the negative &quot;N&quot; for a given triplet.</span>
+
+<span class="sd">    :math:`\\alpha` is  the hyperparameter called the margin which should be picked manually.</span>
+<span class="sd">    The dafault value is  :math:`\\alpha=0.2`</span>
+
+<span class="sd">    Arguments:</span>
+
+<span class="sd">    y_true -- true labels, required when you define a loss in Keras, you don&#39;t need it in this function.</span>
+
+<span class="sd">    y_pred -- python list containing three objects:</span>
+
+<span class="sd">            anchor -- the encodings for the anchor images, of shape (None, 128)</span>
+
+<span class="sd">            positive -- the encodings for the positive images, of shape (None, 128)</span>
+
+<span class="sd">            negative -- the encodings for the negative images, of shape (None, 128)</span>
+
+<span class="sd">    Returns:</span>
+
+<span class="sd">    loss -- real number, value of the loss</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">y_true</span> <span class="o">=</span> <span class="n">y_true</span>
+
+    <span class="n">y_true</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="n">anchor</span><span class="p">,</span> <span class="n">positive</span><span class="p">,</span> <span class="n">negative</span> <span class="o">=</span> <span class="n">y_pred</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">y_pred</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">y_pred</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+
+    <span class="c1"># step 1 compute the encoding distance between the anchor and the positive</span>
+    <span class="n">pos_dist</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">reduce_sum</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">square</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">subtract</span><span class="p">(</span><span class="n">anchor</span><span class="p">,</span> <span class="n">positive</span><span class="p">)),</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="c1"># Step 2: Compute the (encoding) distance between the anchor and the negative</span>
+    <span class="n">neg_dist</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">reduce_sum</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">square</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">subtract</span><span class="p">(</span><span class="n">anchor</span><span class="p">,</span> <span class="n">negative</span><span class="p">)),</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="c1"># Step 3: subtract the two previous distances and add alpha.</span>
+    <span class="n">basic_loss</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">subtract</span><span class="p">(</span><span class="n">pos_dist</span><span class="p">,</span> <span class="n">neg_dist</span><span class="p">),</span> <span class="n">alpha</span><span class="p">)</span>
+
+    <span class="c1"># Step 4: Take the maximum of basic_loss and 0.0. Sum over the training examples.</span>
+    <span class="n">loss</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">reduce_sum</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="n">basic_loss</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;loss_triplet&quot;</span><span class="p">,</span> <span class="n">loss</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">loss</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, Inayatullah Khan (inayatkh@gmail.com).
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.5</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>
